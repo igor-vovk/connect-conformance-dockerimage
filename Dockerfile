@@ -18,10 +18,10 @@ RUN <<EOF
     chmod +x connectconformance
 EOF
 
-FROM scratch AS test
+FROM base AS test
 
 COPY --from=build /conformance /conformance
-RUN <<<EOF
+RUN <<EOF
     echo "Testing conformance binary..."
     /conformance/connectconformance -h
 EOF

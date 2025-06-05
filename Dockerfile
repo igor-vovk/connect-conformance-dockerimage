@@ -21,8 +21,13 @@ EOF
 FROM scratch AS test
 
 COPY --from=build /conformance /conformance
-RUN /conformance/connectconformance -h
+RUN <<<EOF
+    echo "Testing conformance binary..."
+    /conformance/connectconformance -h
+EOF
 
 FROM scratch AS export
 
 COPY --from=build /conformance /conformance
+
+ENTRYPOINT ["/conformance/connectconformance"]

@@ -9,7 +9,7 @@ Container Registry.
 ## Features
 
 - Pre-packaged Connect RPC conformance testing tool
-- Multi-architecture support (Linux amd64/arm64, macOS amd64/arm64)
+- Multi-architecture support (Linux amd64/arm64)
 - Automated builds via GitHub Actions
 - Available on GitHub Container Registry
 

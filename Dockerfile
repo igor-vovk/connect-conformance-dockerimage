@@ -18,6 +18,11 @@ RUN <<EOF
     chmod +x connectconformance
 EOF
 
+FROM scratch AS test
+
+COPY --from=build /conformance /conformance
+RUN /conformance/connectconformance -h
+
 FROM scratch AS export
 
 COPY --from=build /conformance /conformance

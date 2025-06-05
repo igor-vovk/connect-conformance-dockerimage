@@ -18,6 +18,16 @@ RUN <<EOF
     chmod +x connectconformance
 EOF
 
+FROM base AS test
+
+COPY --from=build /conformance /conformance
+RUN <<EOF
+    echo "Testing conformance binary..."
+    /conformance/connectconformance -h
+EOF
+
 FROM scratch AS export
 
 COPY --from=build /conformance /conformance
+
+ENTRYPOINT ["/conformance/connectconformance"]

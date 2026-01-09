@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir /conformance
 WORKDIR /conformance
-ARG CONFORMANCE_VERSION="v1.0.4"
+ARG CONFORMANCE_VERSION="v1.0.5"
 RUN <<EOF
     UNAME_OS=$(uname -s)
     UNAME_ARCH=$(uname -m)

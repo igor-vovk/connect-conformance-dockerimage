@@ -1,0 +1,71 @@
+name: Check for Conformance updates
+
+on:
+  schedule:
+    - cron: '23 8 * * *'
+  workflow_dispatch:
+
+concurrency: conformance-update
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Open an update pull request
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          extract_version='s/^ARG CONFORMANCE_VERSION="\([^"]*\)"$/\1/p'
+          current=$(sed -n "$extract_version" Dockerfile)
+          latest=$(gh api repos/connectrpc/conformance/releases/latest --jq .tag_name)
+          stable_tag='^v[0-9]+\.[0-9]+\.[0-9]+$'
+          if [[ ! $current =~ $stable_tag || ! $latest =~ $stable_tag ]]; then
+            echo '::error::Expected stable vMAJOR.MINOR.PATCH tags in the Dockerfile and upstream release.'
+            exit 1
+          fi
+
+          highest=$(printf '%s\n' "$current" "$latest" | sort -V | tail -n 1)
+          if [[ $current == "$latest" || $highest != "$latest" ]]; then
+            echo "Conformance $current is current (latest upstream release is $latest)."
+            exit 0
+          fi
+
+          branch="automation/conformance-$latest"
+          existing_pr=$(gh pr list --repo "$GITHUB_REPOSITORY" --base main --head "$branch" --state all --limit 1 --json url --jq '.[].url')
+          if [[ -n $existing_pr ]]; then
+            echo "A pull request already exists for $latest at $existing_pr"
+            exit 0
+          fi
+
+          title="Update Connect RPC Conformance to $latest"
+          remote_branch=$(git ls-remote --branches origin "refs/heads/$branch")
+          if [[ -z $remote_branch ]]; then
+            git switch -c "$branch"
+            sed -i "s/^ARG CONFORMANCE_VERSION=\"[^\"]*\"$/ARG CONFORMANCE_VERSION=\"$latest\"/" Dockerfile
+            git add -- Dockerfile
+            git -c user.name='github-actions[bot]' \
+                -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+                commit -m "$title"
+            git push origin "HEAD:refs/heads/$branch"
+          else
+            # A previous run may have pushed the branch before PR creation failed.
+            git fetch --no-tags --depth=1 origin "refs/heads/$branch"
+            branch_version=$(git show FETCH_HEAD:Dockerfile | sed -n "$extract_version")
+            if [[ $branch_version != "$latest" ]]; then
+              echo "::error::$branch has an unexpected Conformance version."
+              exit 1
+            fi
+          fi
+
+          gh pr create --repo "$GITHUB_REPOSITORY" --base main --head "$branch" \
+            --title "$title" \
+            --body "Updates the Dockerfile from $current to [Conformance $latest](https://github.com/connectrpc/conformance/releases/tag/$latest)."

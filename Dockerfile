@@ -1,4 +1,6 @@
-FROM debian AS build
+FROM debian:trixie-slim AS base
+
+FROM base AS build
 
 RUN apt-get update && apt-get install -y \
     curl \
@@ -7,7 +9,7 @@ RUN apt-get update && apt-get install -y \
 
 RUN mkdir /conformance
 WORKDIR /conformance
-ARG CONFORMANCE_VERSION="v1.0.5"
+ARG CONFORMANCE_VERSION="v1.0.7"
 RUN <<EOF
     UNAME_OS=$(uname -s)
     UNAME_ARCH=$(uname -m)
@@ -26,7 +28,7 @@ RUN <<EOF
     /conformance/connectconformance -h
 EOF
 
-FROM scratch AS export
+FROM base AS export
 
 COPY --from=build /conformance /conformance
 
